@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.claude
+data
+local.db
+local.db-*
+.env*
+!.env.example
+*.tsbuildinfo
+npm-debug.log*
+!.env.docker.example

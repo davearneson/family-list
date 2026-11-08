@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: #fafaf9;
+  color: #18181b;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Respect the iPhone notch / home bar when installed to the home screen. */
+main {
+  padding-bottom: max(6rem, env(safe-area-inset-bottom));
+}

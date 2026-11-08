@@ -1,0 +1,25 @@
+# Family List, self-hosted. Paste this into Portainer (Stacks → Add stack → Web editor),
+# or run it with:  docker compose up -d
+#
+# Set these as environment variables (in Portainer: the "Environment variables" section):
+#   FAMILY_PASSWORD  the password everyone types (required)
+#   PUBLIC_URL       the https address your family uses, once your tunnel is set up
+#   HOST_PORT        port on this machine (default 3000)
+services:
+  family-list:
+    # Built by GitHub from github.com/davearneson/family-list on every push to main.
+    image: ghcr.io/davearneson/family-list:latest
+    container_name: family-list
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-3000}:3000"
+    environment:
+      FAMILY_PASSWORD: ${FAMILY_PASSWORD:?Set FAMILY_PASSWORD}
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      APP_TIMEZONE: ${APP_TIMEZONE:-America/Chicago}
+    volumes:
+      # All lists live in this Docker volume. Use "Download a backup" on the Family page to save a copy.
+      - family-list-data:/data
+
+volumes:
+  family-list-data:
