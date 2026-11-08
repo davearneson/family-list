@@ -2,7 +2,7 @@
 
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
-import { canEditItem, getManagerIds, getPerson } from "@/lib/data";
+import { canEditItem, canEditList, getManagerIds, getPerson } from "@/lib/data";
 import { all, batch, get, now, run } from "@/lib/db";
 import { extractUrl, fetchLinkPreview } from "@/lib/linkPreview";
 import { requireViewer } from "@/lib/session";
@@ -130,7 +130,7 @@ export async function reorderItems(fd: FormData) {
   const owner = await getPerson(Number(fd.get("owner_id")));
   if (!owner) redirect("/");
   const managerIds = owner.is_child ? await getManagerIds(owner.id) : [];
-  if (owner.id !== viewer.id && !managerIds.includes(viewer.id)) redirect(`/list/${owner.id}`);
+  if (!canEditList(viewer, owner, managerIds)) redirect(`/list/${owner.id}`);
 
   const current = await all<{ id: number }>(
     "SELECT id FROM items WHERE owner_id = ? AND is_idea = 0 AND removed_at IS NULL ORDER BY position, id",

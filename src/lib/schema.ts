@@ -52,6 +52,15 @@ export const SCHEMA: string[] = [
     seen_at TEXT NOT NULL,
     UNIQUE (item_id, claimer_id)
   )`,
+  // Sizes and general interests, written by the person (or a kid's parents). Everyone can see it.
+  `CREATE TABLE IF NOT EXISTS profiles (
+    person_id INTEGER PRIMARY KEY,
+    shirt_size TEXT,
+    pants_size TEXT,
+    shoe_size TEXT,
+    interests TEXT,
+    updated_at TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL

@@ -27,6 +27,15 @@ export type Item = {
   removed_at: string | null;
 };
 
+export type Profile = {
+  person_id: number;
+  shirt_size: string | null;
+  pants_size: string | null;
+  shoe_size: string | null;
+  interests: string | null;
+  updated_at: string;
+};
+
 export type ClaimStatus = "reserved" | "bought";
 
 export type ClaimInfo = {

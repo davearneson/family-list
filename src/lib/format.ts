@@ -12,6 +12,13 @@ export function formatDay(d: Date): string {
   return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", timeZone: APP_TIMEZONE }).format(d);
 }
 
+/** "November 8", plus the year if it isn't this year. */
+export function formatDate(d: Date): string {
+  const thisYear = new Intl.DateTimeFormat("en-US", { year: "numeric", timeZone: APP_TIMEZONE }).format(new Date());
+  const year = new Intl.DateTimeFormat("en-US", { year: "numeric", timeZone: APP_TIMEZONE }).format(d);
+  return year === thisYear ? formatDay(d) : `${formatDay(d)}, ${year}`;
+}
+
 export function hostOf(url: string | null): string | null {
   if (!url) return null;
   try {

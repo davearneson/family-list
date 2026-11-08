@@ -6,6 +6,7 @@ A private Christmas list site for the family.
 - Anyone can **reserve** or mark **bought** on someone else's list, and the list owner never finds out.
 - Gift-givers can see who has what ("Reserved by Grandma Jo"), so nothing gets bought twice.
 - **Reorder your list** (drag, or tap the arrows) so the things you want most are on top. Parents can reorder their kids' lists.
+- **Sizes & interests:** shirt, pants or dress, and shoe sizes, plus hobbies and general ideas that are too vague for the list.
 - **Secret ideas:** add gift ideas to someone's list that only the other gift-givers can see.
 - **Christmas reveal:** from Dec 26, people can see who gave them what, which helps with thank-you notes.
 - **Add from any site:** paste a link and the name, picture and price fill in. You can also use the iPhone Share button, or a bookmark button on a computer.

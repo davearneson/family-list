@@ -1,6 +1,6 @@
 import { all, get } from "./db";
 import { defaultRevealAt } from "./schema";
-import type { ClaimInfo, ClaimStatus, Household, Item, ItemView, Person } from "./types";
+import type { ClaimInfo, ClaimStatus, Household, Item, ItemView, Person, Profile } from "./types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PRIVACY RULES (enforced here, on the server — never just hidden in the UI):
@@ -43,6 +43,15 @@ export async function getRevealAt(): Promise<Date> {
   const v = await getSetting("reveal_at");
   const d = new Date(v ?? defaultRevealAt());
   return isNaN(d.getTime()) ? new Date(defaultRevealAt()) : d;
+}
+
+export async function getProfile(personId: number) {
+  return get<Profile>("SELECT * FROM profiles WHERE person_id = ?", [personId]);
+}
+
+/** You edit your own list and profile. Parents also edit their kids'. */
+export function canEditList(viewer: Person, owner: Person, managerIds: number[]): boolean {
+  return viewer.id === owner.id || (owner.is_child === 1 && managerIds.includes(viewer.id));
 }
 
 export function canEditItem(

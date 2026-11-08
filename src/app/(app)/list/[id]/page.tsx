@@ -3,9 +3,10 @@ import { notFound } from "next/navigation";
 import { setManagers } from "@/app/actions/family";
 import { SubmitButton } from "@/components/Buttons";
 import { ItemCard } from "@/components/ItemCard";
+import { ProfileCard } from "@/components/ProfileCard";
 import { ReorderList } from "@/components/ReorderList";
 import { button } from "@/components/ui";
-import { canEditItem, getListView, getPeople, getPerson } from "@/lib/data";
+import { canEditItem, getListView, getPeople, getPerson, getProfile } from "@/lib/data";
 import { formatDay, joinNames, possessive } from "@/lib/format";
 import { requireViewer } from "@/lib/session";
 
@@ -16,8 +17,7 @@ export default async function ListPage({ params, searchParams }: PageProps<"/lis
   const owner = await getPerson(Number(id));
   if (!owner) notFound();
 
-  const view = await getListView(viewer, owner);
-  const people = await getPeople();
+  const [view, people, profile] = await Promise.all([getListView(viewer, owner), getPeople(), getProfile(owner.id)]);
   const adults = people.filter((p) => !p.is_child);
   const parentNames = view.managerIds.map((mid) => people.find((p) => p.id === mid)?.name).filter(Boolean) as string[];
   const first = owner.name;
@@ -126,6 +126,12 @@ export default async function ListPage({ params, searchParams }: PageProps<"/lis
           </form>
         </details>
       ) : null}
+
+      <ProfileCard
+        profile={profile}
+        whose={view.isOwnerView ? "your" : possessive(first)}
+        editHref={view.canEdit ? `/list/${owner.id}/about` : null}
+      />
 
       {view.items.length === 0 ? (
         <div className="mt-6 rounded-xl border border-dashed border-zinc-300 px-6 py-10 text-center text-zinc-500">

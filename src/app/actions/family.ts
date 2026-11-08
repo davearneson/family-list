@@ -107,6 +107,7 @@ export async function deletePerson(fd: FormData) {
     { sql: "DELETE FROM items WHERE owner_id = ?", args: [id] },
     { sql: "UPDATE items SET added_by = NULL WHERE added_by = ?", args: [id] },
     { sql: "DELETE FROM managers WHERE child_id = ? OR manager_id = ?", args: [id, id] },
+    { sql: "DELETE FROM profiles WHERE person_id = ?", args: [id] },
     { sql: "DELETE FROM people WHERE id = ?", args: [id] },
   ]);
   refresh();

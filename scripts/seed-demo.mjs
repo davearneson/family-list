@@ -15,7 +15,7 @@ if (!url.startsWith("file:")) {
 }
 const db = createClient({ url });
 // Drop and recreate (rather than deleting the file) so a running dev server picks up the fresh data.
-for (const t of ["claims", "items", "managers", "people", "households", "settings"]) {
+for (const t of ["claims", "items", "managers", "profiles", "people", "households", "settings"]) {
   await db.execute(`DROP TABLE IF EXISTS ${t}`);
 }
 await db.batch(SCHEMA, "write");
@@ -104,5 +104,14 @@ await claim(lego, bill, "bought");
 await claim(art, dana, "reserved");
 await claim(calendar, dana, "reserved");
 await db.execute(NUMBER_POSITIONS);
+
+const profile = (who, shirt, pants, shoes, interests) =>
+  run("INSERT INTO profiles (person_id, shirt_size, pants_size, shoe_size, interests, updated_at) VALUES (?, ?, ?, ?, ?, ?)", [
+    who, shirt, pants, shoes, interests, ts(),
+  ]);
+await profile(dana, "M", "8", "8.5", "Gardening, mystery novels, anything for the kitchen. Favorite color is green.\nRing size 6.");
+await profile(sam, "L", "34x32", "11", "Coffee, grilling, college football. No more mugs, please!");
+await profile(emma, "Kids 10", "Kids 10", "Youth 3", "Unicorns, drawing and LEGO. Just started reading chapter books.");
+await profile(jo, null, null, null, "Jigsaw puzzles, birdwatching, tea. Always cold, so anything cozy is a hit.");
 
 console.log(`Demo family ready in ${url.slice(5)}. Family password is in .env.local.`);
