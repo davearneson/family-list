@@ -21,6 +21,7 @@ export type Item = {
   notes: string | null;
   quantity: number;
   most_wanted: number;
+  position: number;
   created_at: string;
   updated_at: string;
   removed_at: string | null;

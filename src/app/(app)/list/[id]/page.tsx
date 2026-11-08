@@ -3,13 +3,15 @@ import { notFound } from "next/navigation";
 import { setManagers } from "@/app/actions/family";
 import { SubmitButton } from "@/components/Buttons";
 import { ItemCard } from "@/components/ItemCard";
+import { ReorderList } from "@/components/ReorderList";
 import { button } from "@/components/ui";
 import { canEditItem, getListView, getPeople, getPerson } from "@/lib/data";
 import { formatDay, joinNames, possessive } from "@/lib/format";
 import { requireViewer } from "@/lib/session";
 
-export default async function ListPage({ params }: PageProps<"/list/[id]">) {
+export default async function ListPage({ params, searchParams }: PageProps<"/list/[id]">) {
   const { id } = await params;
+  const { reorder } = await searchParams;
   const viewer = await requireViewer(`/list/${id}`);
   const owner = await getPerson(Number(id));
   if (!owner) notFound();
@@ -22,6 +24,35 @@ export default async function ListPage({ params }: PageProps<"/list/[id]">) {
   const canEditParents = owner.is_child && (view.manages || viewer.is_admin);
 
   const title = view.isOwnerView ? "My list" : `${possessive(first)} list`;
+  const canReorder = view.canEdit && view.items.length > 1;
+
+  if (canReorder && reorder) {
+    const listName = view.isOwnerView ? "my list" : `${possessive(first)} list`;
+    return (
+      <div>
+        <Link href={`/list/${owner.id}`} className="text-sm text-zinc-500 hover:text-zinc-900">
+          ← Back to {listName}
+        </Link>
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight">Reorder {listName}</h1>
+        <p className="mt-4 rounded-lg bg-zinc-100 px-3.5 py-2.5 text-sm text-zinc-700">
+          Hold the <span aria-label="three lines">☰</span> and drag, or tap the arrows. Everyone sees the list in this
+          order.
+        </p>
+        <div className="mt-5">
+          <ReorderList
+            ownerId={owner.id}
+            cancelHref={`/list/${owner.id}`}
+            items={view.items.map((i) => ({
+              id: i.id,
+              title: i.title,
+              image_url: i.image_url,
+              most_wanted: i.most_wanted,
+            }))}
+          />
+        </div>
+      </div>
+    );
+  }
 
   let notice: string;
   if (view.isOwnerView && view.revealed) {
@@ -110,17 +141,26 @@ export default async function ListPage({ params }: PageProps<"/list/[id]">) {
           )}
         </div>
       ) : (
-        <ul className="mt-6 space-y-2.5">
-          {view.items.map((item) => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              viewerId={viewer.id}
-              isOwnerView={view.isOwnerView}
-              editable={canEditItem(viewer, item, owner, view.managerIds)}
-            />
-          ))}
-        </ul>
+        <>
+          {canReorder ? (
+            <div className="mt-4 flex justify-end">
+              <Link href={`/list/${owner.id}?reorder=1`} className={button("ghost", "sm")}>
+                <span aria-hidden>↕</span> Reorder
+              </Link>
+            </div>
+          ) : null}
+          <ul className={`${canReorder ? "mt-2" : "mt-6"} space-y-2.5`}>
+            {view.items.map((item) => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                viewerId={viewer.id}
+                isOwnerView={view.isOwnerView}
+                editable={canEditItem(viewer, item, owner, view.managerIds)}
+              />
+            ))}
+          </ul>
+        </>
       )}
 
       {view.ideas.length > 0 ? (

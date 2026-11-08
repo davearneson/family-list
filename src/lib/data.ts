@@ -76,7 +76,7 @@ export async function getListView(viewer: Person, owner: Person) {
     `SELECT i.*, a.name AS added_by_name
        FROM items i LEFT JOIN people a ON a.id = i.added_by
       WHERE i.owner_id = ? AND i.removed_at IS NULL${filter}
-      ORDER BY i.most_wanted DESC, i.created_at ASC, i.id ASC`,
+      ORDER BY i.position, i.id`,
     [owner.id],
   );
 

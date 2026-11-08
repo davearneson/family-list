@@ -1,5 +1,5 @@
 import { createClient, type Client, type InValue } from "@libsql/client";
-import { SCHEMA, defaultRevealAt } from "./schema";
+import { NUMBER_POSITIONS, SCHEMA, defaultRevealAt } from "./schema";
 
 type GlobalDb = { __flClient?: Client; __flReady?: Promise<void> };
 const g = globalThis as unknown as GlobalDb;
@@ -15,6 +15,20 @@ function makeClient(): Client {
 
 const client: Client = g.__flClient ?? (g.__flClient = makeClient());
 
+/** Brings databases made by older versions up to date. Safe to run every startup. */
+async function migrate(): Promise<void> {
+  const cols = await client.execute("PRAGMA table_info(items)");
+  if (!cols.rows.some((r) => r.name === "position")) {
+    try {
+      // Numbering keeps every list in the order it already had.
+      await client.batch(["ALTER TABLE items ADD COLUMN position INTEGER NOT NULL DEFAULT 0", NUMBER_POSITIONS], "write");
+    } catch (err) {
+      // Another server process may have just done it.
+      if (!String(err).includes("duplicate column")) throw err;
+    }
+  }
+}
+
 /** Creates tables on first use, once per server process. */
 function ready(): Promise<void> {
   if (!g.__flReady) {
@@ -29,7 +43,7 @@ function ready(): Promise<void> {
         ],
         "write",
       )
-      .then(() => undefined)
+      .then(migrate)
       .catch((err) => {
         g.__flReady = undefined;
         throw err;

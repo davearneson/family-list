@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { canEditItem, getManagerIds, getPerson } from "@/lib/data";
-import { get, now, run } from "@/lib/db";
+import { all, batch, get, now, run } from "@/lib/db";
 import { extractUrl, fetchLinkPreview } from "@/lib/linkPreview";
 import { requireViewer } from "@/lib/session";
 import type { Item, Person } from "@/lib/types";
@@ -72,9 +72,13 @@ export async function addItem(_: ItemFormState, fd: FormData): Promise<ItemFormS
   const f = parsed.fields;
   const t = now();
   await run(
-    `INSERT INTO items (owner_id, added_by, is_idea, title, url, image_url, price, notes, quantity, most_wanted, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [owner.id, viewer.id, isIdea ? 1 : 0, f.title, f.url, f.image_url, f.price, f.notes, f.quantity, isIdea ? 0 : f.most_wanted, t, t],
+    `INSERT INTO items (owner_id, added_by, is_idea, title, url, image_url, price, notes, quantity, most_wanted, position, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+             (SELECT COALESCE(MAX(position), 0) + 1 FROM items WHERE owner_id = ? AND is_idea = ?), ?, ?)`,
+    [
+      owner.id, viewer.id, isIdea ? 1 : 0, f.title, f.url, f.image_url, f.price, f.notes, f.quantity, isIdea ? 0 : f.most_wanted,
+      owner.id, isIdea ? 1 : 0, t, t,
+    ],
   );
   redirect(`/list/${owner.id}`);
 }
@@ -118,6 +122,33 @@ export async function toggleMostWanted(fd: FormData) {
     await run("UPDATE items SET most_wanted = ? WHERE id = ?", [found.item.most_wanted ? 0 : 1, found.item.id]);
   }
   refresh();
+}
+
+/** Saves a new order for a list. Only the owner, or a parent on a kid's list. Secret ideas are never touched. */
+export async function reorderItems(fd: FormData) {
+  const viewer = await requireViewer();
+  const owner = await getPerson(Number(fd.get("owner_id")));
+  if (!owner) redirect("/");
+  const managerIds = owner.is_child ? await getManagerIds(owner.id) : [];
+  if (owner.id !== viewer.id && !managerIds.includes(viewer.id)) redirect(`/list/${owner.id}`);
+
+  const current = await all<{ id: number }>(
+    "SELECT id FROM items WHERE owner_id = ? AND is_idea = 0 AND removed_at IS NULL ORDER BY position, id",
+    [owner.id],
+  );
+  const left = new Set(current.map((r) => r.id));
+  // The ids sent that belong on this list, once each, in the order sent…
+  const sent = String(fd.get("order") ?? "")
+    .split(",")
+    .map(Number)
+    .filter((id) => left.delete(id));
+  // …then anything not sent (say, added meanwhile by the other parent) at the end, in its old order.
+  const order = [...sent, ...current.map((r) => r.id).filter((id) => left.has(id))];
+  // updated_at is left alone: a new order isn't a change gift-givers need a heads-up about.
+  if (order.length) {
+    await batch(order.map((id, i) => ({ sql: "UPDATE items SET position = ? WHERE id = ?", args: [i + 1, id] })));
+  }
+  redirect(`/list/${owner.id}`);
 }
 
 // ── Claims ──────────────────────────────────────────────────────────────────

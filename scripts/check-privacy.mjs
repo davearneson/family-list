@@ -64,6 +64,10 @@ async function ownerChecks(label) {
     check(l.length === 0, `${label}: ${a.name}'s own list leaks: ${l.join(", ")}`);
     check(!list.html.includes("From "), `${label}: ${a.name}'s own list shows "From" before reveal`);
 
+    const reorder = await page(a.id, `/list/${a.id}?reorder=1`);
+    const r = leaks(reorder, ideas);
+    check(r.length === 0, `${label}: ${a.name}'s reorder screen leaks: ${r.join(", ")}`);
+
     for (const it of items) {
       const edit = await page(a.id, `/item/${it.id}/edit`);
       const e = leaks(edit, ideas);

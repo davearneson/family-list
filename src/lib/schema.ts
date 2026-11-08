@@ -22,6 +22,8 @@ export const SCHEMA: string[] = [
   )`,
   // is_idea = added by a gift-giver; hidden from the list owner.
   // removed_at = owner removed it after someone claimed it; kept so the claimer gets a heads-up.
+  // position = order on the list, set by the owner. Items and secret ideas are numbered separately,
+  // so the owner can't spot gaps left by ideas they aren't allowed to see.
   `CREATE TABLE IF NOT EXISTS items (
     id INTEGER PRIMARY KEY,
     owner_id INTEGER NOT NULL,
@@ -34,6 +36,7 @@ export const SCHEMA: string[] = [
     notes TEXT,
     quantity INTEGER NOT NULL DEFAULT 1,
     most_wanted INTEGER NOT NULL DEFAULT 0,
+    position INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     removed_at TEXT
@@ -57,6 +60,14 @@ export const SCHEMA: string[] = [
   `CREATE INDEX IF NOT EXISTS claims_item ON claims (item_id)`,
   `CREATE INDEX IF NOT EXISTS claims_claimer ON claims (claimer_id)`,
 ];
+
+/** Numbers every list 1, 2, 3… in its old order (most wanted first, then oldest first). */
+export const NUMBER_POSITIONS = `UPDATE items SET position = (
+  SELECT rn FROM (
+    SELECT id, ROW_NUMBER() OVER (PARTITION BY owner_id, is_idea ORDER BY most_wanted DESC, created_at, id) AS rn
+      FROM items
+  ) r WHERE r.id = items.id
+)`;
 
 /** Dec 26 at midnight US Central (06:00 UTC) of the given year. */
 export function defaultRevealAt(year = new Date().getUTCFullYear()): string {

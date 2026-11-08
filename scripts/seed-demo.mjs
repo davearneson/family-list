@@ -1,7 +1,7 @@
 // Fills local.db with a made-up demo family so you can click around.
 // Usage: npm run seed:demo   (local only — refuses to touch a Turso database)
 import { createClient } from "@libsql/client";
-import { SCHEMA, defaultRevealAt } from "../src/lib/schema.ts";
+import { NUMBER_POSITIONS, SCHEMA, defaultRevealAt } from "../src/lib/schema.ts";
 
 if (process.env.TURSO_DATABASE_URL) {
   console.error("TURSO_DATABASE_URL is set. The demo seed only runs against the local file database.");
@@ -103,5 +103,6 @@ await claim(spa, jo, "reserved");
 await claim(lego, bill, "bought");
 await claim(art, dana, "reserved");
 await claim(calendar, dana, "reserved");
+await db.execute(NUMBER_POSITIONS);
 
 console.log(`Demo family ready in ${url.slice(5)}. Family password is in .env.local.`);
