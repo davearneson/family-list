@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { acknowledgeChange, releaseClaim, setClaimStatus } from "@/app/actions/items";
 import { SubmitButton } from "@/components/Buttons";
+import { SavedIdeasSection } from "@/components/SavedIdeas";
 import { Thumb } from "@/components/Thumb";
 import { button, card, chip } from "@/components/ui";
-import { getShopping, type ShoppingRow } from "@/lib/data";
+import { getPeople, getSavedIdeas, getShopping, type ShoppingRow } from "@/lib/data";
 import { money, possessive, priceNumber } from "@/lib/format";
 import { requireViewer } from "@/lib/session";
 
 export default async function ShoppingPage() {
   const viewer = await requireViewer("/shopping");
-  const rows = await getShopping(viewer);
+  const [rows, saved, people] = await Promise.all([getShopping(viewer), getSavedIdeas(viewer), getPeople()]);
 
   const removed = rows.filter((r) => r.removed_at);
   const active = rows.filter((r) => !r.removed_at);
@@ -63,6 +64,8 @@ export default async function ShoppingPage() {
           ))}
         </section>
       )}
+
+      <SavedIdeasSection ideas={saved} people={people} />
 
       {active.length === 0 ? (
         <div className="mt-6 rounded-xl border border-dashed border-zinc-300 px-6 py-10 text-center text-zinc-500">

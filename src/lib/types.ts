@@ -36,6 +36,20 @@ export type Profile = {
   updated_at: string;
 };
 
+/** A private saved idea, with who it might be for. Only ever loaded for the person who saved it. */
+export type SavedIdea = {
+  id: number;
+  person_id: number;
+  title: string;
+  url: string | null;
+  image_url: string | null;
+  price: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  for_ids: number[];
+};
+
 export type ClaimStatus = "reserved" | "bought";
 
 export type ClaimInfo = {

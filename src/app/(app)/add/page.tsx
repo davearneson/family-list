@@ -1,7 +1,8 @@
 import { ItemForm, type Target } from "@/components/ItemForm";
 import { getManagerMap, getPeople } from "@/lib/data";
-import { possessive } from "@/lib/format";
 import { extractUrl } from "@/lib/linkPreview";
+import { SAVE_FOR_LATER } from "@/lib/saved";
+import { listTargets } from "@/lib/targets";
 import { requireViewer } from "@/lib/session";
 
 const str = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
@@ -12,29 +13,18 @@ export default async function AddPage({ searchParams }: PageProps<"/add">) {
   const viewer = await requireViewer(qs ? `/add?${qs}` : "/add");
 
   const [people, managers] = await Promise.all([getPeople(), getManagerMap()]);
-  const managed = people.filter((p) => p.is_child && managers[p.id]?.includes(viewer.id));
-  const managedIds = new Set(managed.map((p) => p.id));
-  const others = people.filter((p) => p.id !== viewer.id && !managedIds.has(p.id));
-
   const targets: Target[] = [
-    { id: viewer.id, label: "My list", group: "mine", hint: "Goes on your list for everyone to see." },
-    ...managed.map((p) => ({
-      id: p.id,
-      label: `${possessive(p.name)} list`,
-      group: "mine" as const,
-      hint: `Goes on ${possessive(p.name)} list for everyone to see.`,
-    })),
-    ...others.map((p) => ({
-      id: p.id,
-      label: p.is_child ? `Gift idea for ${p.name}` : `Secret idea for ${p.name}`,
-      group: "idea" as const,
-      hint: p.is_child
-        ? `Shows on ${possessive(p.name)} list as an idea from you.`
-        : `Only other gift-givers will see this. ${p.name} won't.`,
-    })),
+    {
+      id: SAVE_FOR_LATER,
+      label: "Save for later (only me)",
+      group: "saved",
+      hint: "Only you will see this. Find it under My shopping, then move it to a list whenever you decide.",
+    },
+    ...listTargets(viewer, people, managers),
   ];
 
-  const requested = Number(str(sp.for));
+  // ?for=<person id>, or ?for=0 for "Save for later". Missing means your own list.
+  const requested = str(sp.for).trim() === "" ? NaN : Number(str(sp.for));
   const defaultTargetId = targets.some((t) => t.id === requested) ? requested : viewer.id;
 
   // Links arrive from the share sheet / bookmarklet as ?url= (or buried in ?text=).
@@ -48,6 +38,8 @@ export default async function AddPage({ searchParams }: PageProps<"/add">) {
         mode="add"
         targets={targets}
         defaultTargetId={defaultTargetId}
+        people={people.filter((p) => p.id !== viewer.id).map((p) => ({ id: p.id, name: p.name }))}
+        initialFor={requested > 0 && requested !== viewer.id ? [requested] : []}
         autoLookup={!!sharedUrl}
         initial={{
           url: sharedUrl,

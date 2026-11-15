@@ -4,49 +4,13 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { canEditItem, canEditList, getManagerIds, getPerson } from "@/lib/data";
 import { all, batch, get, now, run } from "@/lib/db";
+import { clampInt, insertItem, readItemFields } from "@/lib/items";
+import { SAVE_FOR_LATER, insertSavedIdea } from "@/lib/saved";
 import { extractUrl, fetchLinkPreview } from "@/lib/linkPreview";
 import { requireViewer } from "@/lib/session";
 import type { Item, Person } from "@/lib/types";
 
 export type ItemFormState = { error: string | null };
-
-const text = (fd: FormData, key: string, max: number) => String(fd.get(key) ?? "").trim().slice(0, max);
-
-function httpUrl(v: string): string | null {
-  if (!v) return null;
-  const candidate = extractUrl(v) ?? (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(v) ? `https://${v}` : null);
-  if (!candidate) return null;
-  try {
-    const u = new URL(candidate);
-    return u.protocol === "https:" || u.protocol === "http:" ? u.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
-function clampInt(v: FormDataEntryValue | null, min: number, max: number): number {
-  const n = Math.round(Number(v ?? min));
-  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : min;
-}
-
-function readItemFields(fd: FormData) {
-  const title = text(fd, "title", 200);
-  const rawUrl = text(fd, "url", 2000);
-  const url = httpUrl(rawUrl);
-  if (!title) return { error: "Give it a name so people know what it is." } as const;
-  if (rawUrl && !url) return { error: "That link doesn't look right. It should start with https://" } as const;
-  return {
-    fields: {
-      title,
-      url,
-      image_url: httpUrl(text(fd, "image_url", 2000)),
-      price: text(fd, "price", 40) || null,
-      notes: text(fd, "notes", 1000) || null,
-      quantity: clampInt(fd.get("quantity"), 1, 99),
-      most_wanted: fd.get("most_wanted") ? 1 : 0,
-    },
-  } as const;
-}
 
 async function loadEditable(viewer: Person, itemId: number) {
   const item = await get<Item>("SELECT * FROM items WHERE id = ? AND removed_at IS NULL", [itemId]);
@@ -61,25 +25,20 @@ async function loadEditable(viewer: Person, itemId: number) {
 
 export async function addItem(_: ItemFormState, fd: FormData): Promise<ItemFormState> {
   const viewer = await requireViewer("/add");
-  const owner = await getPerson(Number(fd.get("owner_id")));
-  if (!owner) return { error: "Pick whose list this goes on." };
   const parsed = readItemFields(fd);
   if ("error" in parsed) return { error: parsed.error ?? null };
 
+  // "Save for later": goes in the viewer's private saved ideas, not on any list.
+  if (fd.get("owner_id") === String(SAVE_FOR_LATER)) {
+    await insertSavedIdea(viewer, parsed.fields, fd.getAll("maybe_for"));
+    redirect("/shopping");
+  }
+
+  const owner = await getPerson(Number(fd.get("owner_id")));
+  if (!owner) return { error: "Pick whose list this goes on." };
   // Anyone who isn't the owner (or a kid's parent) is adding a secret idea.
   const managerIds = owner.is_child ? await getManagerIds(owner.id) : [];
-  const isIdea = !(owner.id === viewer.id || managerIds.includes(viewer.id));
-  const f = parsed.fields;
-  const t = now();
-  await run(
-    `INSERT INTO items (owner_id, added_by, is_idea, title, url, image_url, price, notes, quantity, most_wanted, position, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-             (SELECT COALESCE(MAX(position), 0) + 1 FROM items WHERE owner_id = ? AND is_idea = ?), ?, ?)`,
-    [
-      owner.id, viewer.id, isIdea ? 1 : 0, f.title, f.url, f.image_url, f.price, f.notes, f.quantity, isIdea ? 0 : f.most_wanted,
-      owner.id, isIdea ? 1 : 0, t, t,
-    ],
-  );
+  await insertItem(owner, viewer, !canEditList(viewer, owner, managerIds), parsed.fields);
   redirect(`/list/${owner.id}`);
 }
 

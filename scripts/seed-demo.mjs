@@ -15,7 +15,7 @@ if (!url.startsWith("file:")) {
 }
 const db = createClient({ url });
 // Drop and recreate (rather than deleting the file) so a running dev server picks up the fresh data.
-for (const t of ["claims", "items", "managers", "profiles", "people", "households", "settings"]) {
+for (const t of ["claims", "items", "managers", "profiles", "saved_idea_for", "saved_ideas", "people", "households", "settings"]) {
   await db.execute(`DROP TABLE IF EXISTS ${t}`);
 }
 await db.batch(SCHEMA, "write");
@@ -113,5 +113,18 @@ await profile(dana, "M", "8", "8.5", "Gardening, mystery novels, anything for th
 await profile(sam, "L", "34x32", "11", "Coffee, grilling, college football. No more mugs, please!");
 await profile(emma, "Kids 10", "Kids 10", "Youth 3", "Unicorns, drawing and LEGO. Just started reading chapter books.");
 await profile(jo, null, null, null, "Jigsaw puzzles, birdwatching, tea. Always cold, so anything cozy is a hit.");
+
+const saved = async (who, title, o = {}) => {
+  const c = ts();
+  const id = await run(
+    "INSERT INTO saved_ideas (person_id, title, url, price, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    [who, title, o.url ?? null, o.price ?? null, o.notes ?? null, c, c],
+  );
+  for (const f of o.for ?? []) await run("INSERT INTO saved_idea_for (saved_id, person_id) VALUES (?, ?)", [id, f]);
+};
+await saved(dana, "Cozy wool throw blanket", { price: "$65", for: [jo] });
+await saved(dana, "Bird feeder camera", { price: "$129", notes: "Saw it at the hardware store", for: [jo, bill] });
+await saved(dana, "Hot sauce sampler", { price: "$30" });
+await saved(sam, "Herb garden starter kit", { price: "$40", for: [dana] }); // Dana must never see this.
 
 console.log(`Demo family ready in ${url.slice(5)}. Family password is in .env.local.`);

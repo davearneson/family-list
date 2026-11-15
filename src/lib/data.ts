@@ -1,6 +1,6 @@
 import { all, get } from "./db";
 import { defaultRevealAt } from "./schema";
-import type { ClaimInfo, ClaimStatus, Household, Item, ItemView, Person, Profile } from "./types";
+import type { ClaimInfo, ClaimStatus, Household, Item, ItemView, Person, Profile, SavedIdea } from "./types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PRIVACY RULES (enforced here, on the server — never just hidden in the UI):
@@ -178,6 +178,45 @@ export async function getHomeView(viewer: Person) {
     reserved: myClaims.find((c) => c.status === "reserved")?.n ?? 0,
     bought: myClaims.find((c) => c.status === "bought")?.n ?? 0,
   };
+}
+
+// ── Saved ideas: always filtered by the viewer, so nobody can load anyone else's. ──
+
+async function withForIds(rows: Omit<SavedIdea, "for_ids">[]): Promise<SavedIdea[]> {
+  if (rows.length === 0) return [];
+  const links = await all<{ saved_id: number; person_id: number }>(
+    `SELECT saved_id, person_id FROM saved_idea_for WHERE saved_id IN (${rows.map(() => "?").join(",")})`,
+    rows.map((r) => r.id),
+  );
+  return rows.map((r) => ({ ...r, for_ids: links.filter((l) => l.saved_id === r.id).map((l) => l.person_id) }));
+}
+
+export async function getSavedIdeas(viewer: Person): Promise<SavedIdea[]> {
+  return withForIds(
+    await all<Omit<SavedIdea, "for_ids">>("SELECT * FROM saved_ideas WHERE person_id = ? ORDER BY created_at DESC", [
+      viewer.id,
+    ]),
+  );
+}
+
+export async function getSavedIdea(viewer: Person, id: number): Promise<SavedIdea | undefined> {
+  if (!Number.isInteger(id)) return undefined;
+  const row = await get<Omit<SavedIdea, "for_ids">>("SELECT * FROM saved_ideas WHERE id = ? AND person_id = ?", [
+    id,
+    viewer.id,
+  ]);
+  return row ? (await withForIds([row]))[0] : undefined;
+}
+
+/** The viewer's saved ideas tagged "maybe for" this person. */
+export async function getSavedIdeasFor(viewer: Person, personId: number): Promise<SavedIdea[]> {
+  return withForIds(
+    await all<Omit<SavedIdea, "for_ids">>(
+      `SELECT s.* FROM saved_ideas s JOIN saved_idea_for f ON f.saved_id = s.id
+        WHERE s.person_id = ? AND f.person_id = ? ORDER BY s.created_at DESC`,
+      [viewer.id, personId],
+    ),
+  );
 }
 
 export type ShoppingRow = {

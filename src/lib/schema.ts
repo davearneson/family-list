@@ -61,6 +61,24 @@ export const SCHEMA: string[] = [
     interests TEXT,
     updated_at TEXT NOT NULL
   )`,
+  // Saved ideas: someone's private "maybe" pile, not on any list yet. Only person_id ever sees them.
+  `CREATE TABLE IF NOT EXISTS saved_ideas (
+    id INTEGER PRIMARY KEY,
+    person_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    url TEXT,
+    image_url TEXT,
+    price TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+  // Who a saved idea might be for (also private to the saver).
+  `CREATE TABLE IF NOT EXISTS saved_idea_for (
+    saved_id INTEGER NOT NULL,
+    person_id INTEGER NOT NULL,
+    PRIMARY KEY (saved_id, person_id)
+  )`,
   `CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -68,6 +86,7 @@ export const SCHEMA: string[] = [
   `CREATE INDEX IF NOT EXISTS items_owner ON items (owner_id)`,
   `CREATE INDEX IF NOT EXISTS claims_item ON claims (item_id)`,
   `CREATE INDEX IF NOT EXISTS claims_claimer ON claims (claimer_id)`,
+  `CREATE INDEX IF NOT EXISTS saved_ideas_person ON saved_ideas (person_id)`,
 ];
 
 /** Numbers every list 1, 2, 3… in its old order (most wanted first, then oldest first). */

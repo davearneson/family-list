@@ -7,6 +7,7 @@ A private Christmas list site for the family.
 - Gift-givers can see who has what ("Reserved by Grandma Jo"), so nothing gets bought twice.
 - **Reorder your list** (drag, or tap the arrows) so the things you want most are on top. Parents can reorder their kids' lists.
 - **Sizes & interests:** shirt, pants or dress, and shoe sizes, plus hobbies and general ideas that are too vague for the list.
+- **Saved ideas:** a private "maybe" pile for things you spot before you know who they're for. Tag who it might suit, then move it to a list (and reserve it) when you decide. Only you ever see it.
 - **Secret ideas:** add gift ideas to someone's list that only the other gift-givers can see.
 - **Christmas reveal:** from Dec 26, people can see who gave them what, which helps with thank-you notes.
 - **Add from any site:** paste a link and the name, picture and price fill in. You can also use the iPhone Share button, or a bookmark button on a computer.
@@ -177,6 +178,7 @@ The privacy rules are all in [`src/lib/data.ts`](src/lib/data.ts) and enforced o
 - **One exception, by choice:** if you go to remove an item someone has reserved or bought, you get a warning that someone may have bought it, so you don't delete a gift that's already on its way. It never says who. (This does mean someone could open each item's Edit page to see which are taken.)
 - If an owner removes or edits an item someone already claimed, the person who claimed it gets a heads-up on **My shopping**. The owner sees nothing different.
 - Kids don't log in, so all the grown-ups (parents included) can see claims on kids' lists.
+- Saved ideas are only ever loaded for the person who saved them, so nobody else can see them. The one exception is the admin's backup file, which contains the whole database.
 
 `npm run check:privacy` logs in as every adult and checks that no page leaks anything about their own list. That includes before and after the reveal date.
 

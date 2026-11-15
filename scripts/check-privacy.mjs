@@ -136,6 +136,27 @@ try {
     check(!html.includes("Reserved by"), `after reveal: ${a.name} sees "Reserved by"`);
     for (const b of bought) check(html.includes(`From ${b.name}`), `after reveal: ${a.name} missing "From ${b.name}"`);
   }
+
+  // 4. Saved ideas are private to whoever saved them, everywhere.
+  const everyone = await rows("SELECT id FROM people");
+  for (const a of adults) {
+    const mine = await rows("SELECT title FROM saved_ideas WHERE person_id = ?", [a.id]);
+    const theirs = await rows("SELECT id, title FROM saved_ideas WHERE person_id != ?", [a.id]);
+    const pages = ["/", "/shopping", "/add", ...everyone.map((p) => `/list/${p.id}`)];
+    for (const path of pages) {
+      const html = (await page(a.id, path)).html;
+      const seen = theirs.filter((s) => html.includes(s.title)).map((s) => s.title);
+      check(seen.length === 0, `saved ideas: ${a.name} sees someone else's on ${path}: ${seen.join(", ")}`);
+    }
+    for (const s of theirs) {
+      for (const path of [`/saved/${s.id}`, `/saved/${s.id}/move`]) {
+        const status = (await page(a.id, path)).status;
+        check(status === 404, `saved ideas: ${a.name} opening ${path} got ${status}, expected 404`);
+      }
+    }
+    const shopping = (await page(a.id, "/shopping")).html;
+    for (const s of mine) check(shopping.includes(s.title), `saved ideas: ${a.name} can't see their own "${s.title}"`);
+  }
 } finally {
   await db.execute({ sql: "UPDATE settings SET value = ? WHERE key = 'reveal_at'", args: [originalReveal] });
 }
