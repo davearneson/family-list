@@ -56,7 +56,10 @@ const [{ value: originalReveal }] = await rows("SELECT value FROM settings WHERE
 async function ownerChecks(label) {
   for (const a of adults) {
     const ideas = (await rows("SELECT title FROM items WHERE owner_id = ? AND is_idea = 1", [a.id])).map((r) => r.title);
-    const items = await rows("SELECT id FROM items WHERE owner_id = ? AND is_idea = 0 AND removed_at IS NULL", [a.id]);
+    const items = await rows(
+      "SELECT id, EXISTS (SELECT 1 FROM claims c WHERE c.item_id = items.id) AS claimed FROM items WHERE owner_id = ? AND is_idea = 0 AND removed_at IS NULL",
+      [a.id],
+    );
 
     const list = await page(a.id, `/list/${a.id}`);
     check(list.status === 200, `${label}: ${a.name} /list status ${list.status}`);
@@ -72,6 +75,9 @@ async function ownerChecks(label) {
       const edit = await page(a.id, `/item/${it.id}/edit`);
       const e = leaks(edit, ideas);
       check(e.length === 0, `${label}: ${a.name} edit item ${it.id} leaks: ${e.join(", ")}`);
+      // The one allowed exception: a no-names "someone may have bought this" warning, only on claimed items.
+      const warned = edit.html.includes("someone may have already bought this");
+      check(warned === !!it.claimed, `${label}: ${a.name} edit item ${it.id} removal warning is ${warned ? "shown" : "missing"} (claimed: ${!!it.claimed})`);
     }
 
     const home = await page(a.id, "/");

@@ -108,7 +108,7 @@ export async function removeItem(fd: FormData) {
   if (!found) redirect("/");
   const { item } = found;
   // If someone already claimed it, keep a tombstone so they get a heads-up.
-  // The response is identical either way, so the owner learns nothing.
+  // The response is identical either way (the owner was already warned on the edit page, if at all).
   const claimed = await get<{ n: number }>("SELECT COUNT(*) AS n FROM claims WHERE item_id = ?", [item.id]);
   if (claimed && claimed.n > 0) await run("UPDATE items SET removed_at = ? WHERE id = ?", [now(), item.id]);
   else await run("DELETE FROM items WHERE id = ?", [item.id]);

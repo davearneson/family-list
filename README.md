@@ -174,6 +174,7 @@ The privacy rules are all in [`src/lib/data.ts`](src/lib/data.ts) and enforced o
 
 - When you look at your own list, the server never loads or sends reservations or secret ideas. They aren't just hidden on screen. They never reach your phone, so you can't find them with browser tricks either.
 - Claimed items don't move or change on the owner's view, and there's no "3 of 8 claimed" counter.
+- **One exception, by choice:** if you go to remove an item someone has reserved or bought, you get a warning that someone may have bought it, so you don't delete a gift that's already on its way. It never says who. (This does mean someone could open each item's Edit page to see which are taken.)
 - If an owner removes or edits an item someone already claimed, the person who claimed it gets a heads-up on **My shopping**. The owner sees nothing different.
 - Kids don't log in, so all the grown-ups (parents included) can see claims on kids' lists.
 

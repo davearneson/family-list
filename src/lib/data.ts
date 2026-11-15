@@ -7,6 +7,8 @@ import type { ClaimInfo, ClaimStatus, Household, Item, ItemView, Person, Profile
 //  1. A list owner never receives claim data or secret ideas for their own list.
 //  2. After the reveal date, the owner sees only *bought* claims ("From Jo").
 //  3. Kids don't log in, so every adult (including parents) sees claims on kids' lists.
+// One exception, chosen by the family: when the owner goes to remove an item, they're warned
+// if *someone* has claimed it (isItemClaimed). Never who, and never reserved vs bought.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getPerson(id: number) {
@@ -63,6 +65,22 @@ export function canEditItem(
   const manages = owner.is_child === 1 && managerIds.includes(viewer.id);
   if (item.is_idea) return item.added_by === viewer.id || manages;
   return viewer.id === owner.id || manages;
+}
+
+/** Whether anyone has claimed an item. Yes/no only: the one thing an owner may learn (see the exception above). */
+export async function isItemClaimed(itemId: number): Promise<boolean> {
+  return !!(await get<{ x: number }>("SELECT 1 AS x FROM claims WHERE item_id = ? LIMIT 1", [itemId]));
+}
+
+/** Who has claimed one item. Never call this for the item's owner (rule 1). */
+export async function getItemClaims(itemId: number) {
+  return all<ClaimInfo>(
+    `SELECT c.item_id, c.claimer_id, p.name AS claimer_name, c.quantity, c.status
+       FROM claims c JOIN people p ON p.id = c.claimer_id
+      WHERE c.item_id = ?
+      ORDER BY c.created_at`,
+    [itemId],
+  );
 }
 
 export async function getListView(viewer: Person, owner: Person) {
